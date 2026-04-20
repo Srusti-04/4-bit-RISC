@@ -1,0 +1,120 @@
+module risc_4bit(
+input clk,
+input reset
+);
+
+reg [3:0] registers [3:0];     // 4 Registers
+reg [7:0] memory [15:0];       // Program memory
+reg [3:0] pc;                  // Program counter
+reg [7:0] instruction;
+
+wire [3:0] alu_out;
+
+reg [3:0] alu_a;
+reg [3:0] alu_b;
+reg [3:0] alu_result;
+
+reg [3:0] opcode;
+reg [1:0] rd;
+reg [1:0] rs;
+
+integer i;
+
+always @(posedge clk or posedge reset)
+begin
+    if(reset)
+    begin
+        pc <= 0;
+
+        for(i=0;i<4;i=i+1)
+        registers[i] <= 0;
+
+        // Program Instructions
+
+        memory[0] = 8'b0100_0001; // LOAD R0,1
+        memory[1] = 8'b0100_0101; // LOAD R1,5
+        memory[2] = 8'b0000_0001; // ADD R0,R1
+        memory[3] = 8'b0110_1000; // MOV R2,R0
+        memory[4] = 8'b1111_0000; // HALT
+    end
+
+    else
+    begin
+
+    instruction = memory[pc];
+
+    opcode = instruction[7:4];
+    rd = instruction[3:2];
+    rs = instruction[1:0];
+
+    case(opcode)
+
+    4'b0000: // ADD
+    registers[rd] <= registers[rd] + registers[rs];
+
+    4'b0001: // SUB
+    registers[rd] <= registers[rd] - registers[rs];
+
+    4'b0010: // AND
+    registers[rd] <= registers[rd] & registers[rs];
+
+    4'b0011: // OR
+    registers[rd] <= registers[rd] | registers[rs];
+
+    4'b0100: // LOAD Immediate
+    registers[rd] <= instruction[3:0];
+
+    4'b0110: // MOV
+    registers[rd] <= registers[rs];
+
+    4'b1111: // HALT
+    pc <= pc;
+
+    default:
+    pc <= pc + 1;
+
+    endcase
+
+    if(opcode != 4'b1111)
+    pc <= pc + 1;
+
+    end
+
+end
+
+endmodule
+
+
+timescale 1ns/1ps
+
+module testbench;
+
+reg clk;
+reg reset;
+
+risc_4bit uut(
+.clk(clk),
+.reset(reset)
+);
+
+always #5 clk = ~clk;
+
+initial
+begin
+
+$dumpfile("dump.vcd");
+$dumpvars(0,testbench);
+
+clk = 0;
+reset = 1;
+
+#10
+reset = 0;
+
+#100
+
+$finish;
+
+end
+
+endmodule
